@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Lanternfall</title>
+    <link rel="stylesheet" href="./game.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Lanternfall game area"></canvas>
+
+    <div id="hud" hidden>
+      <div class="xpbar"><i id="xpFill"></i></div>
+      <div class="hudrow">
+        <div class="hudleft">
+          <div class="lvl" id="hudLvl">LV 1</div>
+          <div class="hpbar"><i id="hpFill"></i><span id="hpText">100 / 100</span></div>
+        </div>
+        <div class="hudmid"><b id="hudWave">Wave 1 of 6</b><span id="hudTime">0:00</span></div>
+        <div class="hudright">
+          <div class="kills"><b id="hudKills">0</b> kills</div>
+          <button id="pauseBtn" type="button" aria-label="Pause">
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1" /><rect x="9.5" y="2" width="3.5" height="12" rx="1" /></svg>
+          </button>
+        </div>
+      </div>
+      <div id="bossbar" hidden>
+        <b id="bossName">The Warden</b>
+        <div class="bb"><i id="bossFill"></i></div>
+      </div>
+    </div>
+    <div id="streak" hidden><b id="streakN">0</b><span>streak</span></div>
+    <div id="banner"><b id="bannerT"></b><span id="bannerS"></span></div>
+    <div id="tip" hidden></div>
+    <button id="dashBtn" type="button" hidden>Dash</button>
+
+    <section id="loading" class="overlay clear">
+      <div class="loading">
+        <div class="flame"></div>
+        <p class="small" id="loadingText">Lighting the lantern…</p>
+      </div>
+    </section>
+
+    <section id="intro" class="overlay clear" hidden>
+      <div class="sheet">
+        <div class="row spread">
+          <span class="night-no" id="introNight">Night 1</span>
+          <button class="btn ghost" id="introClose" type="button">Back to post</button>
+        </div>
+        <div class="logo">Lanternfall</div>
+        <div class="panelbox modcard">
+          <h3>Tonight's twist</h3>
+          <b id="introMod">Blood Moon</b>
+          <p id="introModDesc"></p>
+        </div>
+        <div class="facts">
+          <div class="fact"><span>Your weapon</span><b id="introStart">Lantern Bolt</b></div>
+          <div class="fact"><span>Waiting at dawn</span><b id="introBoss">The Warden</b></div>
+          <div class="fact"><span>Lanterns lit</span><b id="introPlayers">0</b></div>
+        </div>
+        <p class="small" id="introStatus"></p>
+        <div class="row">
+          <button class="btn primary" id="beginBtn" type="button">Begin the night</button>
+        </div>
+        <div class="panelbox">
+          <div class="row spread"><h3>Tonight's leaderboard</h3><span class="small" id="introKills"></span></div>
+          <div class="board" id="introBoard"></div>
+        </div>
+        <details class="how panelbox">
+          <summary>How to play</summary>
+          <div class="keys">
+            <kbd>WASD / arrows</kbd><span>Move. On a phone, drag anywhere on the screen.</span>
+            <kbd>Space / Shift</kbd><span>Dash. You cannot be hit while dashing.</span>
+            <kbd>Esc / P</kbd><span>Pause</span>
+            <kbd>1 2 3 4</kbd><span>Pick a card when you level up. R rerolls.</span>
+          </div>
+          <p class="small" style="margin-top: 10px">
+            Your weapons fire on their own. Collect sparks to level up and build a combination of up to 3 weapons and 4 charms. A
+            level 5 weapon plus its matching charm evolves into something much stronger. Survive five waves, then defeat the night's
+            boss before dawn. Everyone gets the same night, and your first run of the day goes on the leaderboard.
+          </p>
+        </details>
+        <div class="row">
+          <label class="toggle"><input type="checkbox" id="optSound" /> Sound</label>
+          <label class="toggle"><input type="checkbox" id="optShake" /> Screen shake</label>
+        </div>
+      </div>
+    </section>
+
+    <section id="levelup" class="overlay" hidden>
+      <div class="sheet">
+        <div class="row spread">
+          <h2 id="luTitle">Level 2</h2>
+          <span class="small" id="luSub">Pick one upgrade</span>
+        </div>
+        <div class="cards" id="cards"></div>
+        <div class="row">
+          <button class="btn" id="rerollBtn" type="button">Reroll</button>
+          <button class="btn" id="skipBtn" type="button">Skip and heal 15</button>
+          <span class="small" id="slotLine"></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="pause" class="overlay" hidden>
+      <div class="sheet">
+        <h2>Paused</h2>
+        <div class="build" id="buildBox"></div>
+        <div class="row">
+          <button class="btn primary" id="resumeBtn" type="button">Resume</button>
+          <button class="btn" id="quitBtn" type="button">End run</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="results" class="overlay" hidden>
+      <div class="sheet">
+        <div class="row spread">
+          <span class="night-no" id="resNight">Night 1</span>
+          <span class="pill" id="resMode">Ranked run</span>
+        </div>
+        <h1 class="result-title" id="resTitle">Dawn breaks</h1>
+        <div class="row" style="align-items: baseline; gap: 14px">
+          <div class="score" id="resScore">0</div>
+          <div class="rankline" id="resRank"></div>
+        </div>
+        <div class="row" id="resBreakdown"></div>
+        <div class="stats" id="resStats"></div>
+        <div class="panelbox">
+          <div class="row spread"><h3>Tonight's leaderboard</h3><span class="small" id="resPlayers"></span></div>
+          <div class="board" id="resBoard"></div>
+        </div>
+        <div class="panelbox" id="voteBox">
+          <div class="row spread"><h3>Vote for tomorrow's twist</h3><span class="small" id="voteNote">The most votes wins.</span></div>
+          <div class="vote" id="voteOpts"></div>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="shareBtn" type="button">Comment my result</button>
+          <button class="btn" id="shareSheetBtn" type="button">Share this night</button>
+        </div>
+        <div class="row">
+          <button class="btn" id="againBtn" type="button">Practice run</button>
+          <button class="btn ghost" id="resClose" type="button">Back to post</button>
+        </div>
+      </div>
+    </section>
+
+    <script type="module" src="./game.ts"></script>
+  </body>
+</html>

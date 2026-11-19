@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Lanternfall</title>
+    <link rel="stylesheet" href="./splash.css" />
+  </head>
+  <body>
+    <canvas id="sky" aria-hidden="true"></canvas>
+    <main class="splash">
+      <div class="top">
+        <span class="night" id="sNight">Tonight</span>
+        <span class="streak" id="sStreak" hidden></span>
+      </div>
+      <h1 class="logo">Lanternfall</h1>
+      <div class="twist">
+        <span class="label">Tonight's twist</span>
+        <b id="sMod">Loading…</b>
+        <p id="sModDesc"></p>
+      </div>
+      <div class="cta">
+        <button class="play" id="sPlay" type="button">Light the lantern</button>
+        <p class="status" id="sStatus">Survive five waves and beat the boss before dawn.</p>
+      </div>
+      <div class="foot">
+        <div class="counts">
+          <span><b id="sPlayers">0</b> lanterns lit</span>
+          <span><b id="sKills">0</b> shades banished</span>
+        </div>
+        <ol class="top3" id="sTop"></ol>
+      </div>
+    </main>
+    <script type="module" src="./splash.ts"></script>
+  </body>
+</html>
