@@ -174,7 +174,11 @@ export function createEngine(opts) {
   }
   window.addEventListener('resize', resize); resize();
 
-  const G = { mode: 'idle', ts: 1, tsTarget: 1, hitstop: 0, trauma: 0, flash: 0, flashRGB: '255,255,255', hurtFlash: 0, levelupIn: -1, cam: { x: 0, y: 0 } };
+  const G = { mode: 'idle', ts: 1, tsTarget: 1, hitstop: 0, trauma: 0, flash: 0, flashRGB: '255,255,255', hurtFlash: 0, levelupIn: -1, cam: { x: 0, y: 0 }, kick: 0 };
+  let VZ = 1; // zoom used this frame, including the punch-in from G.kick
+  const pad = { prev: [], x: 0, y: 0 };
+  const buzz = (ms) => { try { if (settings.shake && navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* not allowed here */ } };
+  const kick = (a) => { if (settings.shake) G.kick = Math.max(G.kick, a); };
   let R = null, M = null, srand = Math.random;
   const keys = {};
   let joy = null;
@@ -210,9 +214,9 @@ export function createEngine(opts) {
       enemies: [], shots: [], ebullets: [], gems: [], pickups: [], parts: [], texts: [], rings: [], comets: [], arcs: [],
       weapons: {}, passives: {}, evolved: {}, timers: {}, pendingLevels: 0, pendingChests: 0,
       rerolls: M.rerolls, over: false, victory: false, overIn: -1, ended: false,
-      pickChain: 0, pickChainT: 0, orbA: 0, tips: [], lowHp: false,
+      pickChain: 0, pickChainT: 0, orbA: 0, tips: [], lowHp: false, grazes: 0,
     };
-    R.p = { x: 0, y: 0, vx: 0, vy: 0, r: 14, hp: 100, maxHp: 100, inv: 1, dashT: 0, dashCd: 0, dx: 1, dy: 0, face: 1, lvl: 1, xp: 0, next: xpFor(1), squash: 0, moving: false, ghostT: 0, walk: 0, ddx: 1, ddy: 0 };
+    R.p = { x: 0, y: 0, vx: 0, vy: 0, r: 14, hp: 100, maxHp: 100, inv: 1, dashT: 0, dashCd: 0, dx: 1, dy: 0, face: 1, lvl: 1, xp: 0, next: xpFor(1), squash: 0, moving: false, ghostT: 0, walk: 0, ddx: 1, ddy: 0, dashBuf: 0 };
     R.weapons[night.start] = 1; R.timers[night.start] = 0.6;
     if (night.modifier === 'falling_stars') { if (R.weapons.comet) R.weapons.comet = 2; else { R.weapons.comet = 1; R.timers.comet = 1.2; } }
     if (night.modifier === 'iron_bark') R.passives.bark = 2;
@@ -345,6 +349,8 @@ export function createEngine(opts) {
       const jx = (joy.x - joy.ox) / 56, jy = (joy.y - joy.oy) / 56, l = Math.hypot(jx, jy);
       if (l > 0.15) { const m = Math.min(1, l); ix += jx / l * m; iy += jy / l * m; }
     }
+    const pl = Math.hypot(pad.x, pad.y);
+    if (pl > 0.2) { ix += pad.x; iy += pad.y; }
     const l = Math.hypot(ix, iy); if (l > 1) { ix /= l; iy /= l; }
     return { x: ix, y: iy, l: Math.min(1, l) };
   }
@@ -363,13 +369,16 @@ export function createEngine(opts) {
     p.x += p.vx * dt; p.y += p.vy * dt;
     p.walk += Math.hypot(p.vx, p.vy) * dt * 0.05;
     p.dashCd = Math.max(0, p.dashCd - dt); p.inv = Math.max(0, p.inv - dt);
+    // a dash pressed just before it recharged still happens, so the input never feels eaten
+    if (p.dashBuf > 0) { p.dashBuf -= dt; if (p.dashCd <= 0 && p.dashT <= 0) { p.dashBuf = 0; tryDash(); } }
     if (p.regen && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + p.regen * dt);
     p.squash = damp(p.squash, 0, 9, dt);
     if (p.moving && Math.random() < dt * 9) part({ x: p.x - p.dx * 8 + vrand(-4, 4), y: p.y + 10, vx: -p.dx * 20, vy: -10, life: 0.35, max: 0.35, size: vrand(1.5, 3), color: '#3A3264', type: 'dot', drag: 3 });
   }
   function tryDash() {
     if (G.mode !== 'play' || !R || R.over || !M.dash) return;
-    const p = R.p; if (p.dashCd > 0 || p.dashT > 0) return;
+    const p = R.p;
+    if (p.dashCd > 0 || p.dashT > 0) { if (p.dashCd < 0.2) p.dashBuf = 0.2; return; }
     let dx = p.dx, dy = p.dy; const v = inputVec(); if (v.l > 0.1) { dx = v.x / v.l; dy = v.y / v.l; }
     p.ddx = dx; p.ddy = dy; p.dashT = 0.16; p.dashCd = p.dashMax; p.inv = Math.max(p.inv, 0.22); p.squash = 1;
     Sfx.dash(); shake(0.06); burst(p.x, p.y, 8, '#FFB547', 120, 0.3, 2.5);
@@ -378,7 +387,7 @@ export function createEngine(opts) {
     const p = R.p;
     if (p.inv > 0 || p.dashT > 0 || R.over) return;
     dmg = Math.max(1, Math.round((dmg - p.armor) * M.taken));
-    p.hp -= dmg; p.inv = 0.75;
+    p.hp -= dmg; p.inv = 0.75; buzz(40);
     G.hurtFlash = 0.45; shake(0.38); hitstop(0.06); Sfx.hurt();
     text(p.x, p.y - 26, '-' + dmg, '#FF4D6D', 18);
     burst(p.x, p.y, 12, '#FF4D6D', 200, 0.45, 3);
@@ -538,14 +547,14 @@ export function createEngine(opts) {
       else if (roll < 0.017) R.pickups.push({ x: e.x, y: e.y, kind: 'magnet', t: 0 });
       else if (roll < 0.021 && R.wave >= 3) R.pickups.push({ x: e.x, y: e.y, kind: 'bomb', t: 0 });
     }
-    if (e.elite) { R.pickups.push({ x: e.x, y: e.y, kind: 'chest', t: 0 }); hitstop(0.07); shake(0.25); ringFx(e.x, e.y, 70, '#FFD166', 0.4, 5); }
+    if (e.elite) { R.pickups.push({ x: e.x, y: e.y, kind: 'chest', t: 0 }); hitstop(0.07); shake(0.25); kick(0.05); ringFx(e.x, e.y, 70, '#FFD166', 0.4, 5); }
     if (e.type === 'bloater') blast(e.x, e.y, 95, 45 * hpMul() * M.bloatDmg, false);
     if (d.boss) {
       R.boss = null; $('bossbar').hidden = true;
       hitstop(0.18); shake(0.9); flash(0.9, '255,209,102'); G.ts = 0.15;
       ringFx(e.x, e.y, 260, '#FFD166', 0.9, 8);
       R.ebullets.length = 0;
-      R.bossKilled = true; R.dawnLeft = Math.max(0, Math.ceil(R.dawnT));
+      R.bossKilled = true; R.dawnLeft = Math.max(0, Math.ceil(R.dawnT)); kick(0.14); buzz(120);
       dawnBreaks(true);
     }
   }
@@ -706,8 +715,15 @@ export function createEngine(opts) {
     const p = R.p;
     for (const b of R.ebullets) {
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
-      if (b.life > 0 && Math.hypot(b.x - p.x, b.y - p.y) < b.r + p.r - 2) {
+      const bd = Math.hypot(b.x - p.x, b.y - p.y);
+      if (b.life > 0 && bd < b.r + p.r - 2) {
         if (p.inv <= 0 && p.dashT <= 0) { hurtPlayer(b.dmg, b.x, b.y); b.life = 0; burst(b.x, b.y, 6, b.color, 120, 0.3, 2.5); }
+        else b.grazed = true;
+      } else if (b.life > 0 && !b.grazed && bd < b.r + p.r + 18 && !R.over) {
+        // graze: a near miss pays out a spark and keeps the streak alive
+        b.grazed = true; R.grazes++;
+        p.xp += 1 * M.xp; R.streakT = Math.max(R.streakT, 2.6);
+        text(p.x, p.y - 30, 'Graze', '#5FE3E0', 13); Sfx.pickup(18); burst(b.x, b.y, 5, '#5FE3E0', 90, 0.25, 2);
       }
     }
     R.ebullets = R.ebullets.filter((b) => b.life > 0 && Math.abs(b.x - p.x) < 1400 && Math.abs(b.y - p.y) < 1400);
@@ -818,7 +834,7 @@ export function createEngine(opts) {
     const p = R.p;
     if (c.kind === 'weapon') { const nw = !R.weapons[c.id]; R.weapons[c.id] = (R.weapons[c.id] || 0) + 1; if (nw) R.timers[c.id] = 0.2; }
     else if (c.kind === 'passive') { R.passives[c.id] = (R.passives[c.id] || 0) + 1; recalc(); if (c.id === 'heart') p.hp = Math.min(p.maxHp, p.hp + 20); p.hp = Math.min(p.hp, p.maxHp); }
-    else if (c.kind === 'evo') { R.evolved[c.id] = true; banner(WEAPONS[c.id].evoName, 'Evolved from ' + WEAPONS[c.id].name + '.', 'gold'); Sfx.evolve(); flash(0.7, '255,209,102'); shake(0.4); ringFx(p.x, p.y, 220, '#FFD166', 0.7, 8); }
+    else if (c.kind === 'evo') { R.evolved[c.id] = true; banner(WEAPONS[c.id].evoName, 'Evolved from ' + WEAPONS[c.id].name + '.', 'gold'); Sfx.evolve(); flash(0.7, '255,209,102'); shake(0.4); kick(0.1); ringFx(p.x, p.y, 220, '#FFD166', 0.7, 8); }
     else { p.hp = p.maxHp; }
     Sfx.click();
     nextChoiceOrResume();
@@ -908,7 +924,7 @@ export function createEngine(opts) {
   }
   function drawEnemy(e, t) {
     const p = R.p, d = e.d, dx = p.x - e.x, dy = p.y - e.y, dl = Math.hypot(dx, dy) || 1, lx = dx / dl, ly = dy / dl;
-    const white = e.flash > 0, sc = 1 - e.spawnT * 1.4;
+    const white = e.flash > 0, sc = (1 - e.spawnT * 1.4) * (1 + Math.max(0, e.flash) * 1.6);
     const r = e.r * Math.max(0.3, sc);
     ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + r * 0.85, r * 0.9, r * 0.3, 0, 0, TAU); ctx.fill();
     if (e.elite) { ctx.strokeStyle = '#FFD166'; ctx.lineWidth = 3; ctx.globalAlpha = 0.6 + Math.sin(t * 6) * 0.3; ctx.beginPath(); ctx.arc(e.x, e.y, r + 6, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1; }
@@ -1088,13 +1104,13 @@ export function createEngine(opts) {
   function drawScreen(t, ox, oy) {
     const p = R ? R.p : { x: G.cam.x, y: G.cam.y };
     const light = M ? M.light : 1;
-    const px = W / 2 + (p.x - G.cam.x) * ZOOM + ox, py = H / 2 + (p.y - G.cam.y) * ZOOM + oy;
+    const px = W / 2 + (p.x - G.cam.x) * VZ + ox, py = H / 2 + (p.y - G.cam.y) * VZ + oy;
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    const lr = 200 * ZOOM * light + Math.sin(t * 7) * 4;
+    const lr = 200 * VZ * light + Math.sin(t * 7) * 4;
     const lg = ctx.createRadialGradient(px, py, 0, px, py, lr);
     lg.addColorStop(0, 'rgba(255,181,71,.13)'); lg.addColorStop(1, 'rgba(255,181,71,0)');
     ctx.fillStyle = lg; ctx.fillRect(px - lr, py - lr, lr * 2, lr * 2); ctx.restore();
-    const dg = ctx.createRadialGradient(px, py, 150 * ZOOM * light, px, py, Math.max(W, H) * 0.78 * light);
+    const dg = ctx.createRadialGradient(px, py, 150 * VZ * light, px, py, Math.max(W, H) * 0.78 * light);
     dg.addColorStop(0, 'rgba(7,5,16,0)'); dg.addColorStop(1, `rgba(7,5,16,${light < 1 ? 0.93 : 0.82})`);
     ctx.fillStyle = dg; ctx.fillRect(0, 0, W, H);
     if (!R) return;
@@ -1109,7 +1125,7 @@ export function createEngine(opts) {
     for (const e of R.enemies) if (!e.dead && (e.d.boss || e.elite)) marks.push({ x: e.x, y: e.y, c: e.d.boss ? '#FF4D6D' : '#FFD166' });
     for (const k of R.pickups) if (k.kind === 'chest') marks.push({ x: k.x, y: k.y, c: '#FFD166' });
     for (const m of marks) {
-      const sx = W / 2 + (m.x - G.cam.x) * ZOOM, sy = H / 2 + (m.y - G.cam.y) * ZOOM;
+      const sx = W / 2 + (m.x - G.cam.x) * VZ, sy = H / 2 + (m.y - G.cam.y) * VZ;
       if (sx > 0 && sx < W && sy > 0 && sy < H) continue;
       const a = Math.atan2(sy - H / 2, sx - W / 2), pad = 34;
       const ex = clamp(W / 2 + Math.cos(a) * W, pad, W - pad), ey = clamp(H / 2 + Math.sin(a) * H, pad + 70, H - pad);
@@ -1139,7 +1155,8 @@ export function createEngine(opts) {
     ctx.fillStyle = '#0E0C1C'; ctx.fillRect(0, 0, W, H);
     const sh = settings.shake ? G.trauma * G.trauma : 0;
     const ox = vrand(-1, 1) * 16 * sh, oy = vrand(-1, 1) * 16 * sh, rot = vrand(-1, 1) * 0.02 * sh;
-    ctx.setTransform(DPR * ZOOM, 0, 0, DPR * ZOOM, DPR * (W / 2 + ox), DPR * (H / 2 + oy));
+    VZ = ZOOM * (1 + G.kick);
+    ctx.setTransform(DPR * VZ, 0, 0, DPR * VZ, DPR * (W / 2 + ox), DPR * (H / 2 + oy));
     ctx.rotate(rot);
     ctx.translate(-G.cam.x, -G.cam.y);
     drawGround(G.cam.x, G.cam.y, t);
@@ -1200,6 +1217,8 @@ export function createEngine(opts) {
     if (G.mode === 'play' && R) update(dt);
     else if (R && G.mode === 'over') updateParts(dt);
     else if (!R) { G.cam.x += 14 * dt; G.cam.y += 6 * dt; }
+    pollPad();
+    G.kick = damp(G.kick, 0, 6, dt);
     G.trauma = Math.max(0, G.trauma - dt * 1.6); G.flash = Math.max(0, G.flash - dt * 2.5); G.hurtFlash = Math.max(0, G.hurtFlash - dt * 1.6);
     render(clock);
     if (G.mode === 'play') updateHud();
@@ -1207,6 +1226,19 @@ export function createEngine(opts) {
   }
 
   /* ---------- input ---------- */
+  // Gamepad: left stick moves, A or RB dashes, Start pauses, A/B/X/Y pick cards 1-4.
+  function pollPad() {
+    let gp = null;
+    try { const all = navigator.getGamepads ? navigator.getGamepads() : []; for (const g of all) if (g && g.connected) { gp = g; break; } } catch (e) { gp = null; }
+    if (!gp) { pad.x = 0; pad.y = 0; return; }
+    pad.x = Math.abs(gp.axes[0] || 0) > 0.2 ? gp.axes[0] : 0; pad.y = Math.abs(gp.axes[1] || 0) > 0.2 ? gp.axes[1] : 0;
+    const down = gp.buttons.map((b) => b.pressed);
+    const pressed = (i) => down[i] && !pad.prev[i];
+    if (G.mode === 'play') { if (pressed(0) || pressed(5)) tryDash(); if (pressed(9)) pause(); }
+    else if (G.mode === 'pause') { if (pressed(9) || pressed(0)) resume(); }
+    else if (G.mode === 'levelup') { for (let k = 0; k < 4; k++) if (pressed(k) && k < choices.length) { choose(k); break; } }
+    pad.prev = down;
+  }
   const KEYMAP = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right' };
   const onKeyDown = (e) => {
     if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = true; if (G.mode === 'play') e.preventDefault(); }

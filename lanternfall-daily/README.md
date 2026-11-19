@@ -23,10 +23,11 @@ Built with [Devvit Web](https://developers.reddit.com/) for Reddit's Game of the
 | Wave events | An encirclement with one gap in wave 4; golden elites that drop chests with a free upgrade. |
 | Boss before dawn | The Warden (telegraphed charges, summons) or the Hollow King (ring volleys, spirals, charges, a second phase). Kill it before the 90-second dawn timer to score a speed bonus. |
 | Streaks | Kill quickly without being hit to build a streak. Getting hit resets it. |
+| Grazes | Letting an enemy bullet pass very close without hitting you pays out a spark and keeps your streak alive, rewarding brave movement. |
 | Daily twists | 12 modifiers such as Blood Moon, The Swarm, Glass Lantern, Thick Fog and Heavy Boots. |
 | Fairness | Spawns, card offers and drops come from the night's seed, so everyone faces the same night. The server re-computes the score and rejects impossible runs. |
 
-Game feel: hit-stop on big hits, trauma-based screen shake (can be turned off), white hit flashes, knockback, damage numbers, squash and stretch, slow-motion before level-ups, dash afterimages, rising pitch when collecting sparks, synthesized sound effects, a low-health heartbeat and off-screen markers for bosses, elites and chests. It respects `prefers-reduced-motion`.
+Game feel: hit-stop on big hits, trauma-based screen shake (can be turned off), a camera punch-in on elite kills, evolutions and the boss kill, white hit flashes with a brief swell, knockback, damage numbers, squash and stretch, slow-motion before level-ups, dash afterimages, a dash input buffer (a press just before the dash recharges still counts), rising pitch when collecting sparks, synthesized sound effects, phone vibration on hits, a low-health heartbeat and off-screen markers for bosses, elites and chests. Gamepads work too (stick to move, A to dash, A/B/X/Y to pick cards). It respects `prefers-reduced-motion`.
 
 ## Community features
 
