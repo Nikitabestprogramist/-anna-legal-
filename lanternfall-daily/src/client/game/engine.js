@@ -1309,6 +1309,8 @@ export function createEngine(opts) {
       }
       return R ? { mode: G.mode, wave: R.wave, t: Math.round(R.t), lvl: R.p.lvl, hp: Math.round(R.p.hp), kills: R.kills, boss: R.boss ? Math.round(R.boss.hp) : null, dawn: Math.round(R.dawnT), victory: R.victory, bossKilled: R.bossKilled, weapons: { ...R.weapons }, evolved: { ...R.evolved } } : { mode: G.mode };
     },
+    /** Read-only view of the run plus a dash press, for automated play-tests. */
+    probe() { return { run: R, dash: tryDash }; },
     destroy() { cancelAnimationFrame(raf); window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp); },
   };
 }

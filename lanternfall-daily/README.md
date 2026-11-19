@@ -73,3 +73,16 @@ npm run launch       # deploy and submit for review so others can install it
 ```
 
 The app name in `devvit.json` (`lanternfall-daily`) must be unique on Reddit. If the upload says it is taken, change `name` in `devvit.json` and `package.json`.
+
+## Play-testing so far
+
+Automated only; no human has played it yet. A scripted bot played both this version and the earlier standalone prototype under the same conditions (five runs each):
+
+| Measure | Earlier prototype | This version |
+| --- | --- | --- |
+| Dash presses made up to 0.2 s before the dash recharged that still produced a dash | 0 of 32 | 20 of 20 |
+| Dash presses that produced a dash (pressing every 0.95 s) | 52% | 62% |
+| Kills in the first 3 minutes (average) | 238 | 259 |
+| Level-ups in the first 3 minutes (average) | 7.0 | 7.2 |
+
+Over eight different nights the bot reached dawn every time and defeated the boss in four. Human play-testing on desktop and the Reddit app is the next step.

@@ -37,6 +37,7 @@ export type Engine = {
   initAudio(): void;
   click(): void;
   sim(steps: number, opts?: { god?: boolean; move?: boolean; dash?: boolean; pickRandom?: boolean }): SimResult;
+  probe(): { run: unknown; dash: () => void };
   destroy(): void;
 };
 
